@@ -1,10 +1,20 @@
 let r;
 let factor = 0;
+let particles = [];
 
 function setup() {
   createCanvas(windowWidth, windowHeight);
-  colorMode(HSB, 360, 100, 100, 1); // Set color mode to HSB
+  colorMode(HSB, 360, 100, 100, 1);
   r = height / 2 - 16;
+
+  // Create a grid of particles within the circle shape
+  for (let x = -r; x <= r; x += 4) {
+    for (let y = -r; y <= r; y += 4) {
+      if (dist(x, y, 0, 0) < r) {
+        particles.push(new Particle(x, y));
+      }
+    }
+  }
 }
 
 function getVector(index, total) {
@@ -16,25 +26,64 @@ function getVector(index, total) {
 
 function draw() {
   background(0);
-  const total = 200;
-  factor += 0.001;
-  
+  const total = 20;
+  factor += 0.015;
+
   translate(width / 2, height / 2);
-  strokeWeight(1);
-  noFill();
-  ellipse(0, 0, r * 2);
+
+  // Draw the sand particles
+  particles.forEach(particle => {
+    particle.draw();
+  });
 
   for (let i = 0; i < total; i++) {
     const a = getVector(i, total);
     const b = getVector(i * factor, total);
 
-    // Generate a new color for each point using the lerpColor function
-    const colorFrom = color(0, 100, 100); // Start color in HSB format (red)
-    const colorTo = color(240, 100, 100); // End color in HSB format (blue)
-    const colorAmount = i / total; // Progress through the total number of points
-    const pointColor = lerpColor(colorFrom, colorTo, colorAmount); // Generate a new color
+    const colorFrom = color(0, 100, 100);
+    const colorTo = color(240, 100, 100);
+    const colorAmount = i / total;
+    const pointColor = lerpColor(colorFrom, colorTo, colorAmount);
+    stroke(pointColor);
 
-    stroke(pointColor); // Set the stroke color to the generated color
-    bezier(a.x, a.y, a.x, -a.y, -b.x, b.y+b.y, -b.x, -b.y); // Draw a Bezier curve between the points
+    // Draw a Bezier curve between the sand particles
+    particles.forEach(particle => {
+      const d1 = dist(particle.pos.x, particle.pos.y, a.x, a.y);
+      const d2 = dist(particle.pos.x, particle.pos.y, -b.x, b.y + b.y);
+      if (d1 < r && d2 < r) {
+        particle.applyForce(createVector(-particle.pos.x, -particle.pos.y).normalize().mult(0.05));
+      }
+    });
+  }
+  
+  // Update and apply forces to the sand particles
+  particles.forEach(particle => {
+    particle.update();
+    particle.applyForce(createVector(0, 0.05));
+  });
+}
+
+// Particle class
+class Particle {
+  constructor(x, y) {
+    this.pos = createVector(x, y);
+    this.vel = createVector(0, 0);
+    this.acc = createVector(0, 0);
+  }
+
+  applyForce(force) {
+    this.acc.add(force);
+  }
+
+  update() {
+    this.vel.add(this.acc);
+    this.vel.limit(5);
+    this.pos.add(this.vel);
+    this.acc.set(0, 0);
+  }
+
+  draw() {
+    strokeWeight(1);
+    point(this.pos.x, this.pos.y);
   }
 }
